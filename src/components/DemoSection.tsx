@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/use-toast";
 import { 
   Upload, 
   Camera, 
@@ -11,44 +12,107 @@ import {
   CheckCircle, 
   AlertTriangle,
   Cpu,
-  Target
+  Target,
+  Wifi,
+  WifiOff
 } from "lucide-react";
+
+// Backend API endpoint - change this to your deployed backend URL
+const API_ENDPOINT = "http://127.0.0.1:8000/predict";
 
 const DemoSection = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<any>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [apiStatus, setApiStatus] = useState<'online' | 'offline' | 'checking'>('checking');
+  const { toast } = useToast();
 
   const handleFileUpload = (file: File) => {
     setUploadedFile(file);
     setResults(null);
-    simulateProcessing();
+    processImageWithAI(file);
   };
 
-  const simulateProcessing = () => {
+  const checkApiStatus = async () => {
+    try {
+      const response = await fetch(API_ENDPOINT.replace('/predict', '/'), {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000)
+      });
+      setApiStatus(response.ok ? 'online' : 'offline');
+    } catch (error) {
+      setApiStatus('offline');
+    }
+  };
+
+  // Check API status on component mount
+  useState(() => {
+    checkApiStatus();
+  });
+
+  const processImageWithAI = async (file: File) => {
     setIsProcessing(true);
     
-    // Simulate AI processing
-    setTimeout(() => {
-      setResults({
-        predictions: [
-          { breed: "Gir", confidence: 92.5, origin: "Gujarat" },
-          { breed: "Sahiwal", confidence: 86.3, origin: "Punjab" },
-          { breed: "Red Sindhi", confidence: 78.9, origin: "Sindh" }
-        ],
-        measurements: {
-          bodyLength: "145.2 cm",
-          heightAtWithers: "132.8 cm", 
-          chestWidth: "67.4 cm",
-          rumpAngle: "24.7°"
-        },
-        score: 8.7,
-        confidence: 94.2,
-        processingTime: "2.3s"
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const startTime = Date.now();
+      const response = await fetch(API_ENDPOINT, {
+        method: "POST",
+        body: formData,
+        signal: AbortSignal.timeout(30000) // 30 second timeout
       });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
+
+      // Transform API response to match our UI format
+      setResults({
+        predicted_breed: data.predicted_breed,
+        confidence: data.confidence,
+        processingTime: `${processingTime}s`,
+        timestamp: new Date().toLocaleString()
+      });
+
+      toast({
+        title: "Analysis Complete",
+        description: `Detected: ${data.predicted_breed} (${data.confidence.toFixed(1)}% confidence)`,
+      });
+
+    } catch (error: any) {
+      console.error("Error processing image:", error);
+      
+      if (error.name === 'AbortError') {
+        toast({
+          title: "Request Timeout",
+          description: "The analysis took too long. Please try again.",
+          variant: "destructive"
+        });
+      } else if (error.message.includes('Failed to fetch')) {
+        setApiStatus('offline');
+        toast({
+          title: "Backend Offline",
+          description: "Cannot connect to AI model. Please ensure your FastAPI backend is running.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Analysis Failed",
+          description: error.message || "An error occurred during image analysis.",
+          variant: "destructive"
+        });
+      }
+      
+      setResults(null);
+    } finally {
       setIsProcessing(false);
-    }, 3000);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -200,53 +264,47 @@ const DemoSection = () => {
               
               {results && (
                 <div className="space-y-6">
-                  {/* Overall Score */}
-                  <div className="text-center p-4 bg-primary/5 rounded-lg border border-primary/20">
-                    <h4 className="text-lg font-semibold text-primary mb-2">ATC Score</h4>
-                    <div className="text-4xl font-bold text-primary">{results.score}/10</div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {results.confidence}% confidence
-                    </p>
+                  {/* Main Prediction Result */}
+                  <div className="text-center p-6 bg-primary/5 rounded-lg border border-primary/20">
+                    <h4 className="text-lg font-semibold text-primary mb-2">Detected Breed</h4>
+                    <div className="text-3xl font-bold text-primary mb-2">{results.predicted_breed}</div>
+                    <Badge variant="default" className="text-lg px-4 py-1">
+                      {results.confidence.toFixed(1)}% confidence
+                    </Badge>
                   </div>
                   
-                  {/* Breed Predictions */}
-                  <div>
-                    <h4 className="font-semibold mb-3 text-card-foreground">Top Breed Predictions</h4>
-                    <div className="space-y-2">
-                      {results.predictions.map((pred: any, index: number) => (
-                        <div key={index} className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                          <div>
-                            <span className="font-medium text-card-foreground">{pred.breed}</span>
-                            <span className="text-sm text-muted-foreground ml-2">({pred.origin})</span>
-                          </div>
-                          <Badge variant={index === 0 ? "default" : "secondary"}>
-                            {pred.confidence}%
-                          </Badge>
-                        </div>
-                      ))}
+                  {/* Analysis Details */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted/30 rounded-lg text-center">
+                      <p className="text-sm text-muted-foreground">Processing Time</p>
+                      <p className="font-semibold text-card-foreground text-lg">{results.processingTime}</p>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-lg text-center">
+                      <p className="text-sm text-muted-foreground">Analysis Time</p>
+                      <p className="font-semibold text-card-foreground text-sm">{results.timestamp}</p>
                     </div>
                   </div>
                   
-                  {/* Physical Measurements */}
-                  <div>
-                    <h4 className="font-semibold mb-3 text-card-foreground">Physical Measurements</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      {Object.entries(results.measurements).map(([key, value]) => (
-                        <div key={key} className="p-3 bg-muted/30 rounded-lg text-center">
-                          <p className="text-sm text-muted-foreground capitalize">
-                            {key.replace(/([A-Z])/g, ' $1').trim()}
-                          </p>
-                          <p className="font-semibold text-card-foreground">{value as string}</p>
-                        </div>
-                      ))}
-                    </div>
+                  {/* Backend Status */}
+                  <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
+                    {apiStatus === 'online' ? (
+                      <>
+                        <Wifi className="w-5 h-5 text-primary" />
+                        <span className="text-sm text-card-foreground">Connected to AI Model Backend</span>
+                      </>
+                    ) : (
+                      <>
+                        <WifiOff className="w-5 h-5 text-destructive" />
+                        <span className="text-sm text-muted-foreground">Backend Offline</span>
+                      </>
+                    )}
                   </div>
                   
                   {/* Processing Info */}
                   <Alert>
                     <CheckCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Analysis completed in {results.processingTime}. 
+                      Real AI analysis completed using your final_model.keras. 
                       Ready for BPA integration and audit trail.
                     </AlertDescription>
                   </Alert>
@@ -255,14 +313,14 @@ const DemoSection = () => {
             </Card>
           </div>
           
-          {/* Demo Note */}
+          {/* Backend Instructions */}
           <div className="mt-8">
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Demo Note:</strong> This is a simulated demonstration. 
-                The actual AI model processes real livestock images with the same interface and provides 
-                actual breed classification and measurements for government use.
+                <strong>Backend Setup:</strong> This connects to your FastAPI backend at http://127.0.0.1:8000/predict. 
+                Run your Python backend with your final_model.keras to enable real AI predictions. 
+                Replace the API_ENDPOINT URL when you deploy to production.
               </AlertDescription>
             </Alert>
           </div>
