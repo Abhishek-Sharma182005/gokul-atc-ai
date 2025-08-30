@@ -17,7 +17,7 @@ import {
   WifiOff
 } from "lucide-react";
 
-// Backend API endpoint - change this to your deployed backend URL
+// Backend API endpoint using your final_model.keras
 const API_ENDPOINT = "http://127.0.0.1:8000/predict";
 
 const DemoSection = () => {
@@ -304,7 +304,7 @@ const DemoSection = () => {
                   <Alert>
                     <CheckCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Real AI analysis completed using your final_model.keras. 
+                      Real AI analysis completed using final_model.keras with 41 Indian cattle/buffalo breeds. 
                       Ready for BPA integration and audit trail.
                     </AlertDescription>
                   </Alert>
