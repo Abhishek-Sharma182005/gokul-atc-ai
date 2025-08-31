@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
+import { API_CONFIG } from "@/config/api";
 import { 
   Upload, 
   Camera, 
@@ -16,9 +17,8 @@ import {
   Wifi,
   WifiOff
 } from "lucide-react";
-// Abhishek Sharma
-// Gradio backend API endpoint from Google Colab
-const API_ENDPOINT = "http://127.0.0.1:5000/api/predict";
+// Abhishek Sharma - Kamdhenu AI Professional Interface
+// API endpoint is now managed in /src/config/api.ts for easy updates
 
 const DemoSection = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -36,9 +36,9 @@ const DemoSection = () => {
 
   const checkApiStatus = async () => {
     try {
-      const response = await fetch(API_ENDPOINT.replace('/run/predict', '/'), {
+      const response = await fetch(API_CONFIG.GRADIO_ENDPOINT.replace(API_CONFIG.PREDICT_ENDPOINT, API_CONFIG.HEALTH_CHECK), {
         method: 'GET',
-        signal: AbortSignal.timeout(5000)
+        signal: AbortSignal.timeout(API_CONFIG.STATUS_CHECK_TIMEOUT)
       });
       setApiStatus(response.ok ? 'online' : 'offline');
     } catch (error) {
@@ -59,10 +59,10 @@ const DemoSection = () => {
       formData.append("data", file);  // Gradio expects "data" key
 
       const startTime = Date.now();
-      const response = await fetch(API_ENDPOINT, {
+      const response = await fetch(API_CONFIG.GRADIO_ENDPOINT, {
         method: "POST",
         body: formData,
-        signal: AbortSignal.timeout(30000) // 30 second timeout
+        signal: AbortSignal.timeout(API_CONFIG.REQUEST_TIMEOUT)
       });
 
       if (!response.ok) {
@@ -137,16 +137,19 @@ const DemoSection = () => {
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16 animate-fade-in">
-          <Badge variant="secondary" className="mb-4 text-lg px-4 py-2">
-            Live Demo
+          <Badge variant="secondary" className="mb-4 text-lg px-4 py-2 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
+            🐄 कामधेनु AI - Professional Interface
           </Badge>
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-foreground">
-            AI Model Demonstration
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-foreground bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            Kamdhenu AI Model Studio
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Upload an image of cattle or buffalo to see our AI in action. 
-            Get instant breed classification and physical parameter analysis.
+            Professional-grade AI analysis for Indian cattle and buffalo breeds. 
+            Advanced breed classification with confidence scoring and real-time processing.
           </p>
+          <div className="mt-4 text-sm text-muted-foreground">
+            <code className="bg-muted px-2 py-1 rounded text-xs">Endpoint: {API_CONFIG.GRADIO_ENDPOINT}</code>
+          </div>
         </div>
 
         <div className="max-w-6xl mx-auto">
@@ -317,12 +320,12 @@ const DemoSection = () => {
           
           {/* Backend Instructions */}
           <div className="mt-8">
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Gradio Setup:</strong> Replace "your-gradio-url" with the public URL from your Colab Gradio app. 
-                When you run demo.launch(share=True) in Colab, it will give you a URL like https://abc123.gradio.live - 
-                use that URL in the API_ENDPOINT above.
+            <Alert className="border-primary/20 bg-primary/5">
+              <AlertTriangle className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-card-foreground">
+                <strong>🚀 Kamdhenu AI Backend:</strong> Currently connected to {API_CONFIG.GRADIO_ENDPOINT}. 
+                To update quickly, run in browser console: <code>updateApiEndpoint("your-new-url")</code> or edit /src/config/api.ts. 
+                Ensure your Gradio app is running with <code>demo.launch(share=True)</code> for public access.
               </AlertDescription>
             </Alert>
           </div>
