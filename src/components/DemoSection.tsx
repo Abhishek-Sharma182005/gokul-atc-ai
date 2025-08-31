@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 // Abhishek Sharma
 // Gradio backend API endpoint from Google Colab
-const API_ENDPOINT = "https://f12293bbecd93132b3.gradio.live/api/predict";
+const API_ENDPOINT = "http://127.0.0.1:5000/api/predict";
 
 const DemoSection = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
