@@ -17,8 +17,8 @@ import {
   WifiOff
 } from "lucide-react";
 
-// Backend API endpoint using your final_model.keras
-const API_ENDPOINT = "http://127.0.0.1:8000/predict";
+// Gradio backend API endpoint from Google Colab
+const API_ENDPOINT = "https://your-gradio-url.gradio.live/run/predict";
 
 const DemoSection = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -36,7 +36,7 @@ const DemoSection = () => {
 
   const checkApiStatus = async () => {
     try {
-      const response = await fetch(API_ENDPOINT.replace('/predict', '/'), {
+      const response = await fetch(API_ENDPOINT.replace('/run/predict', '/'), {
         method: 'GET',
         signal: AbortSignal.timeout(5000)
       });
@@ -56,7 +56,7 @@ const DemoSection = () => {
     
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("data", file);  // Gradio expects "data" key
 
       const startTime = Date.now();
       const response = await fetch(API_ENDPOINT, {
@@ -72,17 +72,19 @@ const DemoSection = () => {
       const data = await response.json();
       const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
 
-      // Transform API response to match our UI format
+      // Gradio returns data in format: { data: [prediction_result] }
+      const prediction = data.data[0];
+      
       setResults({
-        predicted_breed: data.predicted_breed,
-        confidence: data.confidence,
+        predicted_breed: prediction.label || prediction.breed,
+        confidence: prediction.confidence || prediction.confidences?.[0]?.confidence || 0,
         processingTime: `${processingTime}s`,
         timestamp: new Date().toLocaleString()
       });
 
       toast({
         title: "Analysis Complete",
-        description: `Detected: ${data.predicted_breed} (${data.confidence.toFixed(1)}% confidence)`,
+        description: `Detected: ${prediction.label || prediction.breed} (${((prediction.confidence || 0) * 100).toFixed(1)}% confidence)`,
       });
 
     } catch (error: any) {
@@ -97,8 +99,8 @@ const DemoSection = () => {
       } else if (error.message.includes('Failed to fetch')) {
         setApiStatus('offline');
         toast({
-          title: "Backend Offline",
-          description: "Cannot connect to AI model. Please ensure your FastAPI backend is running.",
+          title: "Gradio Backend Offline",
+          description: "Cannot connect to AI model. Please ensure your Gradio app is running in Colab.",
           variant: "destructive"
         });
       } else {
@@ -318,9 +320,9 @@ const DemoSection = () => {
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Backend Setup:</strong> This connects to your FastAPI backend at http://127.0.0.1:8000/predict. 
-                Run your Python backend with your final_model.keras to enable real AI predictions. 
-                Replace the API_ENDPOINT URL when you deploy to production.
+                <strong>Gradio Setup:</strong> Replace "your-gradio-url" with the public URL from your Colab Gradio app. 
+                When you run demo.launch(share=True) in Colab, it will give you a URL like https://abc123.gradio.live - 
+                use that URL in the API_ENDPOINT above.
               </AlertDescription>
             </Alert>
           </div>
