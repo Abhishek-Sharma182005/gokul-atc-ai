@@ -16,9 +16,9 @@ import {
   Wifi,
   WifiOff
 } from "lucide-react";
-
+// Abhishek Sharma
 // Gradio backend API endpoint from Google Colab
-const API_ENDPOINT = "https://f12293bbecd93132b3.gradio.live";
+const API_ENDPOINT = "https://f12293bbecd93132b3.gradio.live/api/predict";
 
 const DemoSection = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
