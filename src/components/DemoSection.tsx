@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 
 // Abhishek Sharma - Kamdhenu AI Professional Interface
-const GRADIO_URL = "https://f03ad93b6fc8b3d0c4.gradio.live";
+const GRADIO_URL = "https://3476e5929f96c1d51f.gradio.live";
 
 const DemoSection = () => {
   return (
